@@ -10,7 +10,7 @@ export default function BookGrid({ books, loading }) {
   }
 
   return (
-    <div className="flex flex-wrap gap-5 justify-center">
+    <div className="flex flex-wrap gap-6 justify-center">
       {books.map((book) => (
         <BookCard key={book.id} book={book} />
       ))}
