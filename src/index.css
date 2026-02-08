@@ -1,0 +1,10 @@
+@import "tailwindcss";
+
+@theme {
+  --font-quilon : "Quilon", sans-serif;
+  --font-display : "Be Vietnam Pro", sans-serif;
+}
+
+::-webkit-scrollbar {
+  display: none;
+}
