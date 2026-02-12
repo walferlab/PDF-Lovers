@@ -6,8 +6,6 @@ import ReactGA from "react-ga4";
 export default function SearchHero() {
   const navigate = useNavigate();
 
-  const categories = ["Books", "Papers", "PDFs", "Notes", "Journals"];
-
   const suggestions = [
     "Atomic Habits",
     "Machine Learning",
@@ -18,23 +16,24 @@ export default function SearchHero() {
   ];
 
   // ✅ State
-  const [activeCategory, setActiveCategory] = useState("Books");
   const [query, setQuery] = useState("");
 
   // ✅ Search Handler
   const handleSearch = (searchText = query) => {
+    const finalQuery = searchText.trim();
+    if (!finalQuery) return;
+
      ReactGA.event({
-    category: "Search",
-    action: activeCategory,
-    label: query,
-  });
-    if (!searchText.trim()) return;
+      category: "Search",
+      action: "All",
+      label: finalQuery,
+    });
 
     // Encode query for URL safety
-    const encoded = encodeURIComponent(searchText);
+    const encoded = encodeURIComponent(finalQuery);
 
     // ✅ Smooth SPA Redirect
-    navigate(`/search?type=${activeCategory}&q=${encoded}`);
+    navigate(`/search?q=${encoded}`);
   };
 
   return (
@@ -50,33 +49,15 @@ export default function SearchHero() {
           Search free books & academic resources
         </h1>
 
-        {/* Tabs */}
-        <div className="flex justify-start sm:justify-center gap-3 overflow-x-auto no-scrollbar pb-2">
-          {categories.map((item) => (
-            <button
-              key={item}
-              onClick={() => setActiveCategory(item)}
-              className={`shrink-0 px-4 py-1.5 rounded-full border text-sm transition
-                ${
-                  activeCategory === item
-                    ? "bg-white text-black border-white"
-                    : "text-white/70 border-white/20 hover:text-white hover:border-white/40"
-                }`}
-            >
-              {item}
-            </button>
-          ))}
-        </div>
-
         {/* Search Bar */}
         <div className="max-w-3xl mx-auto">
           <div
             className="
               flex items-center gap-3
               bg-white/15 border border-white/20
-              rounded-2xl sm:rounded-full
-              px-4 sm:px-6
-              py-3 sm:py-4
+              rounded-full
+              px-2 pl-4
+              py-2 
               backdrop-blur-md
             "
           >
@@ -89,7 +70,7 @@ export default function SearchHero() {
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSearch()}
               type="text"
-              placeholder={`Search ${activeCategory.toLowerCase()}...`}
+              placeholder="Search title, category, or tags..."
               className="
                 w-full bg-transparent outline-none
                 text-white placeholder:text-white/50
@@ -102,14 +83,14 @@ export default function SearchHero() {
               onClick={() => handleSearch()}
               className="
                 bg-white text-black font-medium
-                px-4 sm:px-6 py-2
-                rounded-xl sm:rounded-full
-                text-sm
+                p-3
+                rounded-full
+                text-xs sm:text-sm
                 hover:bg-gray-200 transition
                 shrink-0
               "
             >
-              Search
+              <Search strokeWidth={3} className="w-4 sm:w-6 h-4 sm:h-6" />
             </button>
           </div>
         </div>

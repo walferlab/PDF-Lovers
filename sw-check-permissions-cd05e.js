@@ -1,3 +1,5 @@
+/* global importScripts */
+
 function getYmid() {
     try {
         return new URL(location.href).searchParams.get('ymid');

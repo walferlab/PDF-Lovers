@@ -1,143 +1,251 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams, Link, useNavigate } from "react-router-dom";
+import ReactGA from "react-ga4";
 import { supabase } from "../lib/supabaseClient";
 import { Search, HeartCrack } from "lucide-react";
 import Navbar from "../components/navbar";
+import Footer from "../components/footer";
+import Seo from "../components/seo";
+
+const SUGGESTIONS = [
+  "Atomic Habits",
+  "Machine Learning",
+  "Physics Notes",
+  "DSA Sheet",
+  "Business",
+  "AI Research",
+];
+const MAX_QUERY_LENGTH = 120;
+const MIN_QUERY_LENGTH = 2;
+
+const normalize = (value) =>
+  String(value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const toTokens = (value) => normalize(value).split(" ").filter(Boolean);
+const toWords = (value) => normalize(value).split(" ").filter(Boolean);
+
+const toTagArray = (tags) => {
+  if (Array.isArray(tags)) return tags.map((tag) => String(tag));
+  if (typeof tags === "string") {
+    return tags
+      .split(",")
+      .map((tag) => tag.trim())
+      .filter(Boolean);
+  }
+  if (tags && typeof tags === "object") return Object.values(tags).map(String);
+  return [];
+};
+
+const boundedLevenshtein = (a, b, maxDistance = 2) => {
+  if (a === b) return 0;
+  if (!a || !b) return Math.max(a.length, b.length);
+  if (Math.abs(a.length - b.length) > maxDistance) return maxDistance + 1;
+
+  const prev = new Array(b.length + 1);
+  const curr = new Array(b.length + 1);
+
+  for (let j = 0; j <= b.length; j += 1) prev[j] = j;
+
+  for (let i = 1; i <= a.length; i += 1) {
+    curr[0] = i;
+    let minInRow = curr[0];
+
+    for (let j = 1; j <= b.length; j += 1) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      curr[j] = Math.min(
+        prev[j] + 1,
+        curr[j - 1] + 1,
+        prev[j - 1] + cost
+      );
+      if (curr[j] < minInRow) minInRow = curr[j];
+    }
+
+    if (minInRow > maxDistance) return maxDistance + 1;
+
+    for (let j = 0; j <= b.length; j += 1) prev[j] = curr[j];
+  }
+
+  return prev[b.length];
+};
+
+const fuzzyWordBonus = (token, words) => {
+  if (!token || words.length === 0 || token.length < 3) return 0;
+
+  let best = 0;
+  for (const word of words) {
+    if (!word || Math.abs(word.length - token.length) > 2) continue;
+    const distance = boundedLevenshtein(token, word, 2);
+    if (distance === 1) best = Math.max(best, 16);
+    if (distance === 2) best = Math.max(best, 8);
+  }
+  return best;
+};
+
+const getBookScore = (book, normalizedQuery, tokens, activeType) => {
+  const title = normalize(book?.title);
+  const category = normalize(book?.category);
+  const tags = toTagArray(book?.tags).map(normalize);
+  const tagsText = tags.join(" ");
+  const titleWords = toWords(title);
+  const categoryWords = toWords(category);
+  const tagWords = toWords(tagsText);
+  const type = normalize(activeType);
+  let score = 0;
+
+  if (!title && !category && !tagsText) return 0;
+
+  if (title === normalizedQuery) score += 220;
+  if (title.startsWith(normalizedQuery)) score += 140;
+  if (title.includes(normalizedQuery)) score += 90;
+
+  if (category === normalizedQuery) score += 130;
+  if (category.includes(normalizedQuery)) score += 60;
+
+  if (tags.includes(normalizedQuery)) score += 160;
+  if (tagsText.includes(normalizedQuery)) score += 70;
+
+  tokens.forEach((token) => {
+    if (title.includes(token)) score += 26;
+    if (category.includes(token)) score += 20;
+    if (tagsText.includes(token)) score += 24;
+
+    score += fuzzyWordBonus(token, titleWords);
+    score += fuzzyWordBonus(token, categoryWords);
+    score += fuzzyWordBonus(token, tagWords);
+  });
+
+  if (type && type !== "all") {
+    if (category === type) score += 36;
+    else if (category.includes(type)) score += 18;
+  }
+
+  score += Math.min(20, Math.log10((book?.views || 0) + 1) * 8);
+  return score;
+};
 
 export default function SearchPage() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
 
-  const q = params.get("q") || "";
-  const type = params.get("type") || "Books";
+  const q = String(params.get("q") || "").slice(0, MAX_QUERY_LENGTH);
+  const currentType = "All";
 
   const [books, setBooks] = useState([]);
   const [loading, setLoading] = useState(true);
+  const inputRef = useRef(null);
 
-  // ✅ Search Bar State
-  const categories = ["Books", "Papers", "PDFs", "Notes", "Journals"];
-  const suggestions = [
-    "Atomic Habits",
-    "Machine Learning",
-    "Physics Notes",
-    "DSA Sheet",
-    "Business",
-    "AI Research",
-  ];
+  const normalizedQuery = useMemo(() => normalize(q), [q]);
+  const tokens = useMemo(() => toTokens(q), [q]);
 
-  const [activeCategory, setActiveCategory] = useState(type);
-  const [query, setQuery] = useState(q);
+  const handleSearch = (text = "") => {
+    const finalQuery = text.trim().slice(0, MAX_QUERY_LENGTH);
+    if (!finalQuery) return;
 
-  // ✅ Redirect Search (same as SearchHero)
-  const handleSearch = (text = query) => {
-     ReactGA.event({
-    category: "Search",
-    action: activeCategory,
-    label: query,
-  });
-    if (!text.trim()) return;
+    ReactGA.event({
+      category: "Search",
+      action: "All",
+      label: finalQuery,
+    });
 
-    const encoded = encodeURIComponent(text);
-    navigate(`/search?type=${activeCategory}&q=${encoded}`);
+    const encoded = encodeURIComponent(finalQuery);
+    navigate(`/search?q=${encoded}`);
   };
 
-  // ✅ Smart Search Engine
-  const runSearch = async () => {
-    if (!q.trim()) return;
+  const runSearch = useCallback(async () => {
+    if (!normalizedQuery || normalizedQuery.length < MIN_QUERY_LENGTH) {
+      setBooks([]);
+      setLoading(false);
+      return;
+    }
 
     setLoading(true);
-    const keyword = `%${q}%`;
 
-    let results = [];
+    let queryBuilder = supabase
+      .from("books")
+      .select("id,title,category,img_url,tags,views,created_at")
+      .order("views", { ascending: false })
+      .limit(800);
 
-    // 1️⃣ Search inside category first
-    if (type && type !== "All") {
-      const { data, error } = await supabase
-        .from("books")
-        .select("id,title,category,img_url")
-        .eq("category", type)
-        .ilike("title", keyword)
-        .limit(30);
+    const { data, error } = await queryBuilder;
 
-      if (!error) results = data;
+    if (error) {
+      setBooks([]);
+      setLoading(false);
+      return;
     }
 
-    // 2️⃣ If nothing → Global search fallback
-    if (results.length === 0) {
-      const { data, error } = await supabase
-        .from("books")
-        .select("id,title,category,img_url")
-        .or(`title.ilike.${keyword},category.ilike.${keyword}`)
-        .limit(30);
+    let scored = (data || [])
+      .map((book) => ({
+        book,
+        score: getBookScore(book, normalizedQuery, tokens, currentType),
+      }))
+      .filter((item) => item.score > 0)
+      .sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        return (b.book?.views || 0) - (a.book?.views || 0);
+      })
+      .map((item) => item.book)
+      .slice(0, 60);
 
-      if (error) console.log("Search Error:", error);
-      results = data || [];
-    }
-
-    setBooks(results);
+    setBooks(scored);
     setLoading(false);
-  };
+  }, [currentType, normalizedQuery, tokens]);
 
-  // ✅ Run search whenever URL changes
   useEffect(() => {
-    setQuery(q);
-    setActiveCategory(type);
-    runSearch();
-  }, [q, type]);
+    const timer = setTimeout(() => {
+      runSearch();
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, [runSearch]);
+
+  const seoTitle = q.trim()
+    ? `Search Results for "${q}" - PDF Lovers`
+    : "Search PDFs - PDF Lovers";
+
+  const seoDescription = q.trim()
+    ? `Search results for "${q}" across PDF titles, categories, and tags.`
+    : "Search PDF books by title, category, and tags.";
 
   return (
     <>
+      <Seo
+        title={seoTitle}
+        description={seoDescription}
+        pathname="/search"
+        robots="noindex, follow"
+      />
       <Navbar />
 
       <div className="min-h-screen bg-white px-4 py-10 pt-24 font-display">
         <div className="max-w-6xl mx-auto space-y-10">
-
-          {/* ✅ Search Bar Section */}
           <div className="space-y-6">
-
-            {/* Tabs */}
-            <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
-              {categories.map((item) => (
-                <button
-                  key={item}
-                  onClick={() => setActiveCategory(item)}
-                  className={`shrink-0 px-4 py-1.5 rounded-full border text-sm transition
-                    ${
-                      activeCategory === item
-                        ? "bg-black text-white border-black"
-                        : "text-gray-500 border-gray-300 hover:text-black"
-                    }`}
-                >
-                  {item}
-                </button>
-              ))}
-            </div>
-
-            {/* Search Input */}
-            <div className="flex items-center gap-3 bg-gray-100 border rounded-2xl px-5 py-3">
+            <div className="flex items-center gap-3 bg-gray-100 border rounded-2xl p-3">
               <Search className="text-gray-400" size={20} />
 
               <input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                onKeyDown={(e) =>
-                  e.key === "Enter" && handleSearch()
-                }
-                placeholder={`Search ${activeCategory.toLowerCase()}...`}
+                ref={inputRef}
+                key={q}
+                defaultValue={q}
+                onKeyDown={(e) => e.key === "Enter" && handleSearch(e.currentTarget.value)}
+                placeholder="Search by title, category, or tags..."
                 className="w-full bg-transparent outline-none text-sm"
               />
 
               <button
-                onClick={() => handleSearch()}
-                className="bg-black text-white px-5 py-2 rounded-xl text-sm hover:opacity-90 transition"
+                onClick={() => handleSearch(inputRef.current?.value || "")}
+                className="bg-black text-white p-2 rounded-xl text-sm hover:opacity-90 transition"
               >
-                Search
+                <Search strokeWidth={3} />
               </button>
             </div>
 
-            {/* Suggestions */}
             <div className="flex gap-2 overflow-x-auto no-scrollbar">
-              {suggestions.map((tag) => (
+              {SUGGESTIONS.map((tag) => (
                 <button
                   key={tag}
                   onClick={() => handleSearch(tag)}
@@ -149,7 +257,6 @@ export default function SearchPage() {
             </div>
           </div>
 
-          {/* ✅ Header */}
           <div>
             <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900">
               Search Results
@@ -157,20 +264,12 @@ export default function SearchPage() {
 
             <p className="text-sm text-gray-500 flex items-center gap-2 mt-2">
               <Search size={16} />
-              Showing results for{" "}
-              <span className="font-medium text-black">“{q}”</span>
-              {type && <span className="text-gray-400">in {type}</span>}
+              Showing results for <span className="font-medium text-black">"{q}"</span>
             </p>
           </div>
 
-          {/* ✅ Loading */}
-          {loading && (
-            <p className="text-gray-500 text-sm">
-              Searching books...
-            </p>
-          )}
+          {loading && <p className="text-gray-500 text-sm">Searching books...</p>}
 
-          {/* ✅ No Results */}
           {!loading && books.length === 0 && (
             <div className="text-center py-20">
               <p className="text-lg font-semibold text-gray-800 flex gap-2 justify-center">
@@ -178,12 +277,11 @@ export default function SearchPage() {
                 No PDFs found
               </p>
               <p className="text-sm text-gray-500 mt-1">
-                Try searching another keyword...
+                Try searching by another title, category, or tag...
               </p>
             </div>
           )}
 
-          {/* ✅ Results */}
           {!loading && books.length > 0 && (
             <div className="grid gap-6 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
               {books.map((book) => (
@@ -205,9 +303,7 @@ export default function SearchPage() {
                     <p className="text-sm font-medium text-gray-900 line-clamp-2">
                       {book.title}
                     </p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {book.category}
-                    </p>
+                    <p className="text-xs text-gray-500 mt-1">{book.category}</p>
                   </div>
                 </Link>
               ))}
@@ -216,10 +312,7 @@ export default function SearchPage() {
         </div>
       </div>
 
-      {/* Footer */}
-      <div className="w-full text-center font-display text-sm p-2 bg-gray-900 text-white/80">
-        &copy; PDF Lovers 2026. All Rights Reserved.
-      </div>
+      <Footer />
     </>
   );
 }
