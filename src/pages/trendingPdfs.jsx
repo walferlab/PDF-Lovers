@@ -77,7 +77,7 @@ export default function TrendingPdfs() {
         structuredData={structuredData}
       />
       <Navbar />
-      <main className="min-h-screen bg-[#fafafa] pt-20 sm:pt-24">
+      <main className="min-h-screen bg-[#fafafa] pt-28 sm:pt-32">
         <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:py-10">
           <section className="text-center">
             <div className="flex items-center justify-center gap-2">

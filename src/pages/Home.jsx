@@ -107,7 +107,7 @@ export default function Home() {
         structuredData={structuredData}
       />
       <Navbar />
-      <div className="py-5 max-w-6xl mx-auto min-h-screen w-full flex flex-col items-center space-y-15 pt-24 px-4 bg-white">
+      <div className="py-5 max-w-6xl mx-auto min-h-screen w-full flex flex-col items-center space-y-15 pt-32 px-4 bg-white">
         <SearchBox />
         <h2 className="font-display text-2xl sm:text-4xl text-black/90 font-black text-center">
           Latest PDFs

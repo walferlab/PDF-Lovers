@@ -278,7 +278,7 @@ export default function PdfPage() {
           robots="noindex, follow"
         />
         <Navbar />
-        <div className="min-h-screen flex items-center justify-center flex-col gap-2 text-md text-gray-600">
+        <div className="min-h-screen pt-32 flex items-center justify-center flex-col gap-2 text-md text-gray-600">
           <LoaderCircle className="w-6 h-6 animate-spin text-gray-500" />
           <p className="font-display font-bold text-md">Loading book...</p>
         </div>
@@ -296,7 +296,7 @@ export default function PdfPage() {
           robots="noindex, follow"
         />
         <Navbar />
-        <div className="min-h-screen flex items-center justify-center flex-col text-md text-gray-600">
+        <div className="min-h-screen pt-32 flex items-center justify-center flex-col text-md text-gray-600">
           <p className="font-display font-bold text-lg">Book not found.</p>
           <button
             type="button"
@@ -324,7 +324,7 @@ export default function PdfPage() {
 
       <Navbar />
 
-      <div className="min-h-screen bg-white pt-15">
+      <div className="min-h-screen bg-white pt-28">
         <div className="max-w-6xl mx-auto px-4 pt-8">
           <button
             type="button"

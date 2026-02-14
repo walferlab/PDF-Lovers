@@ -13,7 +13,7 @@ export default function NotFound() {
         robots="noindex, follow"
       />
       <Navbar />
-      <main className="min-h-screen pt-24 px-4 flex items-center justify-center bg-white">
+      <main className="min-h-screen pt-32 px-4 flex items-center justify-center bg-white">
         <div className="text-center max-w-md">
           <h1 className="text-3xl font-display font-bold text-black">404</h1>
           <p className="mt-2 text-sm font-display text-black/65">

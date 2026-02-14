@@ -10,7 +10,7 @@ const MAIN_LINKS = [
   { label: "Categories", to: "/categories", icon: FolderOpen },
 ];
 const ADS_NOTICE =
-  "Sorry for any inappropriate ads. They help us grow this website and keep resources free.";
+  "We are sorry for any inappropriate ads. They help us keep this website running and resources free.";
 const ADS_NOTICE_DISMISSED_KEY = "pdf_lovers_ads_notice_dismissed";
 
 export default function Navbar() {
@@ -98,7 +98,7 @@ export default function Navbar() {
       </header>
 
       {showAdsNotice && (
-        <div className="fixed inset-x-0 top-16 z-[45] border-b border-black/10 bg-amber-50/95 px-3 py-1 text-[11px] leading-tight text-black/70 backdrop-blur">
+        <div className="fixed inset-x-0 top-16 z-45 border-b border-black/10 bg-amber-50/95 px-3 py-1 text-[11px] leading-tight text-black/70 backdrop-blur">
           <div className="mx-auto flex w-full max-w-6xl items-center justify-center gap-2">
             <p className="font-display text-xs sm:text-sm font-semibold text-amber-900">
               {ADS_NOTICE}

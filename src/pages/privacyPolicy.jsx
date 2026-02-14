@@ -21,7 +21,7 @@ export default function PrivacyPolicy() {
         structuredData={structuredData}
       />
       <Navbar />
-      <main className="min-h-screen bg-white pt-20 sm:pt-24">
+      <main className="min-h-screen bg-white pt-28 sm:pt-32">
         <div className="mx-auto w-full max-w-4xl px-4 py-8 sm:py-10">
           <h1 className="font-display text-3xl font-black text-black/85 sm:text-4xl">
             Privacy Policy

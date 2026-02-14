@@ -339,7 +339,7 @@ export default function RequestAPdf() {
       />
       <Navbar />
 
-      <div className="w-full min-h-screen flex items-center justify-center px-4">
+      <div className="w-full min-h-screen pt-32 pb-8 flex items-center justify-center px-4">
         {reqStatus === "none" && (
           <RequestInput
             title={title}

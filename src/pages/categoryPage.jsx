@@ -121,7 +121,7 @@ export default function CategoryPage() {
           robots="noindex, follow"
         />
         <Navbar />
-        <div className="min-h-screen flex items-center justify-center text-md text-gray-600">
+        <div className="min-h-screen pt-32 flex items-center justify-center text-md text-gray-600">
           <p className="font-display font-bold text-md">Loading category...</p>
         </div>
       </>
@@ -141,7 +141,7 @@ export default function CategoryPage() {
 
       <Navbar />
 
-      <main className="w-full min-h-screen bg-white pt-18 sm:pt-20">
+      <main className="w-full min-h-screen bg-white pt-28 sm:pt-32">
         <div className="max-w-6xl mx-auto px-4 pb-8 pt-5 sm:pb-10 sm:pt-6">
           <h1 className="text-center font-display text-3xl sm:text-5xl font-semibold tracking-tight text-gray-900 leading-snug">
             {displayCategory || "Category"}

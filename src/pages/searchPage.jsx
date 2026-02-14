@@ -221,7 +221,7 @@ export default function SearchPage() {
       />
       <Navbar />
 
-      <div className="min-h-screen bg-white px-4 py-10 pt-24 font-display">
+      <div className="min-h-screen bg-white px-4 py-10 pt-32 font-display">
         <div className="max-w-6xl mx-auto space-y-10">
           <div className="space-y-6">
             <div className="flex items-center gap-3 bg-gray-100 border rounded-2xl p-3">

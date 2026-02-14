@@ -180,7 +180,7 @@ export default function Categories() {
 
       <Navbar />
 
-      <main className="w-full bg-[#fafafa] pt-18 sm:pt-20">
+      <main className="w-full bg-[#fafafa] pt-28 sm:pt-32">
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-5 px-3 pb-8 pt-4 sm:gap-6 sm:px-4 sm:pb-10 sm:pt-6 md:gap-7 md:px-6 md:pb-12">
           <header className="px-1 py-2 sm:px-0 sm:py-3">
             <div className="flex items-center justify-center gap-2">
