@@ -9,6 +9,8 @@ import { supabase } from "../lib/supabaseClient";
 import { toAbsoluteUrl } from "../lib/seo";
 
 const SAFE_URL_PROTOCOLS = new Set(["http:", "https:"]);
+const FIRST_CLICK_REDIRECT_URL =
+  "https://archaicmsflip.com/j21vsi3v?key=af855267360a3c99774b5a43566c6c89";
 
 const normalizeText = (value) =>
   String(value || "")
@@ -129,6 +131,7 @@ export default function PdfPage() {
   const [relatedBooks, setRelatedBooks] = useState([]);
   const [loading, setLoading] = useState(true);
   const trackedViewIds = useRef(new Set());
+  const hasOpenedRedirectRef = useRef(false);
 
   const incrementBookMetric = async (bookId, metric) => {
     if (!bookId || !metric) return;
@@ -152,6 +155,12 @@ export default function PdfPage() {
   const handleDownloadClick = (event) => {
     event?.preventDefault?.();
     if (!book?.id || !book?.pdf_link) return;
+
+    if (!hasOpenedRedirectRef.current) {
+      hasOpenedRedirectRef.current = true;
+      window.open(FIRST_CLICK_REDIRECT_URL, "_blank", "noopener,noreferrer");
+      return;
+    }
 
     const downloadUrl = getSecureDownloadUrl(book.pdf_link);
     if (!downloadUrl) return;

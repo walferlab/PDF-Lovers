@@ -41,10 +41,14 @@ export default function Seo({
   structuredData = null,
 }) {
   useEffect(() => {
-    const fullTitle = safeMetaText(title) || `${SITE_NAME} | Free PDF Library`;
+    const fullTitle = safeMetaText(title) || `${SITE_NAME} | Free PDF Books and Study Materials`;
     const cleanDescription = safeMetaText(
       description,
-      "Discover free PDF books, notes, and study resources on PDF Lovers."
+      "Discover and download free PDF books, notes, journals, and exam study materials on PDF Lovers."
+    );
+    const cleanKeywords = safeMetaText(
+      keywords,
+      "PDF Lovers, free pdf books, pdf notes, journals pdf, download pdf books, free study materials, exam notes pdf"
     );
     const canonicalUrl = toAbsoluteUrl(canonical || pathname);
     const imageUrl = toAbsoluteUrl(image);
@@ -74,9 +78,7 @@ export default function Seo({
     );
     upsertMetaTag('meta[name="twitter:image"]', { name: "twitter:image" }, imageUrl);
 
-    if (keywords) {
-      upsertMetaTag('meta[name="keywords"]', { name: "keywords" }, safeMetaText(keywords));
-    }
+    upsertMetaTag('meta[name="keywords"]', { name: "keywords" }, cleanKeywords);
 
     upsertCanonical(canonicalUrl);
 
