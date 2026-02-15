@@ -7,6 +7,7 @@ import Footer from "../components/footer";
 import Seo from "../components/seo";
 import { supabase } from "../lib/supabaseClient";
 import { toAbsoluteUrl } from "../lib/seo";
+import { toCategoryArray } from "../lib/category";
 
 const MAX_CATEGORY_SECTIONS = 12;
 
@@ -32,7 +33,7 @@ function ShowCategory({ catName }) {
       const { data, error } = await supabase
         .from("books")
         .select("*")
-        .eq("category", catName)
+        .contains("category", [catName])
         .order("views", { ascending: false })
         .limit(10);
 
@@ -103,26 +104,27 @@ export default function Categories() {
       const byCategory = new Map();
 
       for (const row of data || []) {
-        const name = String(row?.category || "").trim();
-        if (!name) continue;
-
-        const key = name.toLowerCase();
         const views = Number(row?.views || 0);
-        const current = byCategory.get(key) || {
-          name,
-          count: 0,
-          maxViews: 0,
-          totalViews: 0,
-        };
+        const rowCategories = toCategoryArray(row?.category);
 
-        current.count += 1;
-        current.totalViews += views;
-        if (views > current.maxViews) {
-          current.maxViews = views;
-          current.name = name;
+        for (const name of rowCategories) {
+          const key = name.toLowerCase();
+          const current = byCategory.get(key) || {
+            name,
+            count: 0,
+            maxViews: 0,
+            totalViews: 0,
+          };
+
+          current.count += 1;
+          current.totalViews += views;
+          if (views > current.maxViews) {
+            current.maxViews = views;
+            current.name = name;
+          }
+
+          byCategory.set(key, current);
         }
-
-        byCategory.set(key, current);
       }
 
       const ranked = [...byCategory.values()]

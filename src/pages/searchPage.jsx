@@ -6,6 +6,7 @@ import { Search, HeartCrack } from "lucide-react";
 import Navbar from "../components/navbar";
 import Footer from "../components/footer";
 import Seo from "../components/seo";
+import { getCategoryText, toCategoryArray } from "../lib/category";
 
 const SUGGESTIONS = [
   "Atomic Habits",
@@ -87,30 +88,31 @@ const fuzzyWordBonus = (token, words) => {
 
 const getBookScore = (book, normalizedQuery, tokens, activeType) => {
   const title = normalize(book?.title);
-  const category = normalize(book?.category);
+  const categories = toCategoryArray(book?.category).map(normalize);
+  const categoriesText = categories.join(" ");
   const tags = toTagArray(book?.tags).map(normalize);
   const tagsText = tags.join(" ");
   const titleWords = toWords(title);
-  const categoryWords = toWords(category);
+  const categoryWords = toWords(categoriesText);
   const tagWords = toWords(tagsText);
   const type = normalize(activeType);
   let score = 0;
 
-  if (!title && !category && !tagsText) return 0;
+  if (!title && categories.length === 0 && !tagsText) return 0;
 
   if (title === normalizedQuery) score += 220;
   if (title.startsWith(normalizedQuery)) score += 140;
   if (title.includes(normalizedQuery)) score += 90;
 
-  if (category === normalizedQuery) score += 130;
-  if (category.includes(normalizedQuery)) score += 60;
+  if (categories.includes(normalizedQuery)) score += 130;
+  if (categories.some((cat) => cat.includes(normalizedQuery))) score += 60;
 
   if (tags.includes(normalizedQuery)) score += 160;
   if (tagsText.includes(normalizedQuery)) score += 70;
 
   tokens.forEach((token) => {
     if (title.includes(token)) score += 26;
-    if (category.includes(token)) score += 20;
+    if (categoriesText.includes(token)) score += 20;
     if (tagsText.includes(token)) score += 24;
 
     score += fuzzyWordBonus(token, titleWords);
@@ -119,8 +121,8 @@ const getBookScore = (book, normalizedQuery, tokens, activeType) => {
   });
 
   if (type && type !== "all") {
-    if (category === type) score += 36;
-    else if (category.includes(type)) score += 18;
+    if (categories.includes(type)) score += 36;
+    else if (categories.some((cat) => cat.includes(type))) score += 18;
   }
 
   score += Math.min(20, Math.log10((book?.views || 0) + 1) * 8);
@@ -303,7 +305,9 @@ export default function SearchPage() {
                     <p className="text-sm font-medium text-gray-900 line-clamp-2">
                       {book.title}
                     </p>
-                    <p className="text-xs text-gray-500 mt-1">{book.category}</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {getCategoryText(book.category) || "PDF"}
+                    </p>
                   </div>
                 </Link>
               ))}

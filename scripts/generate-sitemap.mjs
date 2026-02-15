@@ -44,6 +44,38 @@ function slugify(value) {
     .replace(/-+/g, "-");
 }
 
+function toCategoryArray(category) {
+  if (Array.isArray(category)) {
+    return category.map((item) => String(item || "").trim()).filter(Boolean);
+  }
+
+  if (typeof category === "string") {
+    const trimmed = category.trim();
+    if (!trimmed) return [];
+
+    if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) {
+          return parsed.map((item) => String(item || "").trim()).filter(Boolean);
+        }
+      } catch {
+        // Keep compatibility with old single-string rows.
+      }
+    }
+
+    return [trimmed];
+  }
+
+  if (category && typeof category === "object") {
+    return Object.values(category)
+      .map((item) => String(item || "").trim())
+      .filter(Boolean);
+  }
+
+  return [];
+}
+
 function xmlEscape(value) {
   return String(value || "")
     .replace(/&/g, "&amp;")
@@ -176,14 +208,14 @@ async function main() {
 
     const categoryLatestDate = new Map();
     for (const book of books) {
-      const category = String(book?.category || "").trim();
-      if (!category) continue;
       const date = normalizeDate(book.updated_at || book.created_at);
       if (!date) continue;
 
-      const prev = categoryLatestDate.get(category);
-      if (!prev || new Date(date).getTime() > new Date(prev).getTime()) {
-        categoryLatestDate.set(category, date);
+      for (const category of toCategoryArray(book?.category)) {
+        const prev = categoryLatestDate.get(category);
+        if (!prev || new Date(date).getTime() > new Date(prev).getTime()) {
+          categoryLatestDate.set(category, date);
+        }
       }
     }
 

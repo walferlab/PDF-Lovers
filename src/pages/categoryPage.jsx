@@ -6,6 +6,14 @@ import BookCard from "../components/bookCard";
 import Seo from "../components/seo";
 import { supabase } from "../lib/supabaseClient";
 import { toAbsoluteUrl } from "../lib/seo";
+import { getPrimaryCategory, matchCategory, toCategoryArray } from "../lib/category";
+
+const normalizeCategory = (value) =>
+  String(value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 
 export default function CategoryPage() {
   const { slug } = useParams();
@@ -20,10 +28,6 @@ export default function CategoryPage() {
       .replace(/-+/g, " ");
   }, [slug]);
 
-  const categoryPattern = useMemo(() => {
-    return `%${categoryName.toLowerCase().replace(/\s+/g, "%")}%`;
-  }, [categoryName]);
-
   useEffect(() => {
     const fetchCategoryBooks = async () => {
       if (!categoryName) {
@@ -35,21 +39,19 @@ export default function CategoryPage() {
 
       setLoading(true);
       setFetchError("");
+      const normalizedCategoryName = normalizeCategory(categoryName);
 
       const { data: exactData, error: exactError } = await supabase
         .from("books")
         .select("*")
-        .ilike("category", categoryName)
+        .contains("category", [categoryName])
         .order("views", { ascending: false });
 
       if (exactError) {
-        setBooks([]);
-        setFetchError("Unable to load this category right now.");
-        setLoading(false);
-        return;
+        // Continue with fallback to keep the page usable if exact array match fails.
       }
 
-      if ((exactData || []).length > 0) {
+      if (!exactError && (exactData || []).length > 0) {
         setBooks(exactData || []);
         setLoading(false);
         return;
@@ -58,29 +60,42 @@ export default function CategoryPage() {
       const { data: looseData, error: looseError } = await supabase
         .from("books")
         .select("*")
-        .ilike("category", categoryPattern)
+        .not("category", "is", null)
         .order("views", { ascending: false });
 
       if (looseError) {
         setBooks([]);
         setFetchError("Unable to load this category right now.");
       } else {
-        setBooks(looseData || []);
+        const filtered = (looseData || []).filter((book) =>
+          toCategoryArray(book?.category).some((cat) => {
+            const normalized = normalizeCategory(cat);
+            return (
+              normalized === normalizedCategoryName ||
+              normalized.includes(normalizedCategoryName)
+            );
+          })
+        );
+        setBooks(filtered);
       }
 
       setLoading(false);
     };
 
     fetchCategoryBooks();
-  }, [categoryName, categoryPattern]);
+  }, [categoryName]);
 
-  const displayCategory =
-    books[0]?.category ||
-    categoryName
+  const displayCategory = useMemo(() => {
+    const matched = matchCategory(books[0]?.category, categoryName);
+    if (matched) return matched;
+    const primary = getPrimaryCategory(books[0]?.category);
+    if (primary) return primary;
+    return categoryName
       .split(" ")
       .filter(Boolean)
       .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
       .join(" ");
+  }, [books, categoryName]);
 
   const structuredData = useMemo(() => {
     const items = books.slice(0, 20).map((book, index) => ({

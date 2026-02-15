@@ -11,12 +11,6 @@
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://pdflovers.vercel.app/category/books</loc>
-    <lastmod>2026-02-08T13:23:42.366Z</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
     <loc>https://pdflovers.vercel.app/pdf/0a2489a1-cfd1-4d63-bdf3-b732d5d79187</loc>
     <lastmod>2026-02-08T13:16:51.906Z</lastmod>
     <changefreq>weekly</changefreq>

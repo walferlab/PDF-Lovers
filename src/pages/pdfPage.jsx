@@ -7,6 +7,11 @@ import Footer from "../components/footer";
 import Seo from "../components/seo";
 import { supabase } from "../lib/supabaseClient";
 import { toAbsoluteUrl } from "../lib/seo";
+import {
+  getCategoryText,
+  getPrimaryCategory,
+  toCategoryArray,
+} from "../lib/category";
 
 const SAFE_URL_PROTOCOLS = new Set(["http:", "https:"]);
 const FIRST_CLICK_REDIRECT_URL =
@@ -34,8 +39,8 @@ const toTagArray = (tags) => {
 };
 
 const getRelatedScore = (mainBook, candidate) => {
-  const mainCategory = normalizeText(mainBook?.category);
-  const candidateCategory = normalizeText(candidate?.category);
+  const mainCategories = toCategoryArray(mainBook?.category).map(normalizeText);
+  const candidateCategories = toCategoryArray(candidate?.category).map(normalizeText);
 
   const mainTags = new Set(toTagArray(mainBook?.tags).map(normalizeText));
   const candidateTags = new Set(toTagArray(candidate?.tags).map(normalizeText));
@@ -47,12 +52,22 @@ const getRelatedScore = (mainBook, candidate) => {
 
   let score = 0;
 
-  if (mainCategory && candidateCategory) {
-    if (mainCategory === candidateCategory) score += 160;
-    else if (
-      mainCategory.includes(candidateCategory) ||
-      candidateCategory.includes(mainCategory)
-    ) {
+  if (mainCategories.length > 0 && candidateCategories.length > 0) {
+    const hasExactCategory = mainCategories.some((mainCategory) =>
+      candidateCategories.includes(mainCategory)
+    );
+    const hasLooseCategory = !hasExactCategory
+      ? mainCategories.some((mainCategory) =>
+          candidateCategories.some(
+            (candidateCategory) =>
+              mainCategory.includes(candidateCategory) ||
+              candidateCategory.includes(mainCategory)
+          )
+        )
+      : false;
+
+    if (hasExactCategory) score += 160;
+    else if (hasLooseCategory) {
       score += 90;
     }
   }
@@ -232,6 +247,8 @@ export default function PdfPage() {
   const safeImageUrl = useMemo(() => {
     return toSafeHttpUrl(book?.img_url) || toAbsoluteUrl("/preview.png");
   }, [book?.img_url]);
+  const primaryCategory = useMemo(() => getPrimaryCategory(book?.category), [book?.category]);
+  const categoryText = useMemo(() => getCategoryText(book?.category), [book?.category]);
   const visibleTags = useMemo(() => toTagArray(book?.tags).slice(0, 6), [book?.tags]);
 
   const seoStructuredData = useMemo(() => {
@@ -246,7 +263,7 @@ export default function PdfPage() {
         name: book.title,
         url: toAbsoluteUrl(`/pdf/${book.id}`),
         image: safeImageUrl,
-        genre: book.category || "PDF",
+        genre: primaryCategory || "PDF",
         keywords: tags.join(", "),
         datePublished: book.created_at || undefined,
       },
@@ -263,7 +280,7 @@ export default function PdfPage() {
           {
             "@type": "ListItem",
             position: 2,
-            name: book.category || "PDFs",
+            name: primaryCategory || "PDFs",
             item: toAbsoluteUrl("/categories"),
           },
           {
@@ -275,7 +292,7 @@ export default function PdfPage() {
         ],
       },
     ];
-  }, [book, safeImageUrl]);
+  }, [book, primaryCategory, safeImageUrl]);
 
   if (loading) {
     return (
@@ -327,7 +344,7 @@ export default function PdfPage() {
         pathname={`/pdf/${book.id}`}
         image={safeImageUrl}
         type="article"
-        keywords={`${book.title}, ${book.category || "pdf"}, free pdf download`}
+        keywords={`${book.title}, ${categoryText || "pdf"}, free pdf download`}
         structuredData={seoStructuredData}
       />
 
@@ -359,7 +376,7 @@ export default function PdfPage() {
 
             <div className="flex-1 space-y-6">
               <span className="inline-flex items-center px-3 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-700 border border-gray-200">
-                {book.category}
+                {categoryText || "PDF"}
               </span>
 
               <h1 className="font-display text-3xl sm:text-5xl font-semibold tracking-tight text-gray-900 leading-snug">
