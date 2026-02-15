@@ -25,6 +25,9 @@ function ShowCategory({ catName }) {
   const slug = toSlug(catName);
   const [catBooks, setCatBooks] = useState([]);
   const [loading, setLoading] = useState(true);
+  const normalizedCatName = String(catName || "")
+    .trim()
+    .toLowerCase();
 
   useEffect(() => {
     const fetchCategoryBooks = async () => {
@@ -37,17 +40,37 @@ function ShowCategory({ catName }) {
         .order("views", { ascending: false })
         .limit(10);
 
-      if (error) {
+      if (!error && (data || []).length > 0) {
+        setCatBooks(data || []);
+        setLoading(false);
+        return;
+      }
+
+      const { data: fallbackData, error: fallbackError } = await supabase
+        .from("books")
+        .select("*")
+        .not("category", "is", null)
+        .order("views", { ascending: false })
+        .limit(300);
+
+      if (fallbackError) {
         setCatBooks([]);
       } else {
-        setCatBooks(data || []);
+        const filtered = (fallbackData || [])
+          .filter((book) =>
+            toCategoryArray(book?.category).some(
+              (name) => String(name || "").trim().toLowerCase() === normalizedCatName
+            )
+          )
+          .slice(0, 10);
+        setCatBooks(filtered);
       }
 
       setLoading(false);
     };
 
     fetchCategoryBooks();
-  }, [catName]);
+  }, [catName, normalizedCatName]);
 
   return (
     <section className="py-2 sm:py-3">
