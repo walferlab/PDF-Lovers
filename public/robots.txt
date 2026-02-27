@@ -1,9 +1,0 @@
-User-agent: *
-Allow: /
-
-# Internal results and utility pages
-Disallow: /search
-Disallow: /requestpdf
-Disallow: /404
-
-Sitemap: https://pdflovers.vercel.app/sitemap.xml
